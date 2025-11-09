@@ -1,11 +1,15 @@
-import type { QueryFunction } from '@tanstack/query-core';
+import type { QueryFunction,QueryOptions } from '@tanstack/query-core';
 
 import type { ExtractInternalKeys, InternalKey } from './internals';
 import type { AnyMutableOrReadonlyArray, DefinitionKey, KeyTuple } from './types';
 
 export type AnyQueryKey = readonly [string, ...any[]];
 
-type ValidFactoryKey = 'queryKey' | 'queryFn' | 'contextQueries';
+
+type QueryKeysFactoryQueryOptions = Omit<QueryOptions, 'queryKey'|'queryFn'|'_defaulted'>;
+
+// type ValidFactoryKey = 'queryKey' | 'queryFn' | 'contextQueries';
+type ValidFactoryKey = 'queryKey' | 'queryFn' | 'contextQueries' | keyof QueryKeysFactoryQueryOptions;
 
 export type StrictOptions<T> =
   T extends any[] ? T
@@ -47,14 +51,18 @@ type FactoryProperty =
   | KeyTuple
   | NullableQueryKeyRecord
   | KeySchemaWithContextualQueries
-  | $QueryFactorySchema
-  | QueryFactoryWithContextualQueriesSchema;
+  // | $QueryFactorySchema
+  | $QueryFactorySchema & QueryKeysFactoryQueryOptions
+  // | QueryFactoryWithContextualQueriesSchema;
+  | QueryFactoryWithContextualQueriesSchema & QueryKeysFactoryQueryOptions;
 
 type DynamicKey = (
   ...args: any[]
 ) =>
-  | DynamicQueryFactoryWithContextualQueriesSchema
-  | DynamicQueryFactorySchema
+  // | DynamicQueryFactoryWithContextualQueriesSchema
+  | DynamicQueryFactoryWithContextualQueriesSchema & QueryKeysFactoryQueryOptions
+  // | DynamicQueryFactorySchema
+  | DynamicQueryFactorySchema & QueryKeysFactoryQueryOptions
   | DynamicKeySchemaWithContextualQueries
   | QueryKeyRecord
   | KeyTuple;

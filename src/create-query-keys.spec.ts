@@ -805,4 +805,97 @@ describe('createQueryKeys |> extrapolating "contextQueries" nesting', () => {
       }>();
     });
   });
+
+  describe('accept other query options', () => {
+    it('returns the expected types and shape', () => {
+      const sut = createQueryKeys('test', {
+        prop: (value: string) => ({
+          queryKey: [value],
+          contextQueries: {
+            nested1: null,
+            nested2: ['context-prop-2'],
+            nested3: (nestedValue?: string) => ({
+              queryKey: [nestedValue],
+              queryFn: () => Promise.resolve(),
+              retryDelay(failureCount, error) {
+                console.log(error)
+                return failureCount * 1000;
+              },
+              contextQueries: {
+                nested4: null,
+              },
+            }),
+          },
+        }),
+      });
+      console.log(sut.prop('context-props')._ctx.nested3('nested-value'));
+
+      expect(sut).toEqual({
+        _def: ['test'],
+        prop: expect.any(Function),
+      });
+
+      expect(sut.prop._def).toEqual(['test', 'prop']);
+
+      const result = sut.prop('context-props');
+      expect(result).toEqual({
+        queryKey: ['test', 'prop', 'context-props'],
+        _ctx: {
+          nested1: {
+            queryKey: ['test', 'prop', 'context-props', 'nested1'],
+          },
+          nested2: {
+            _def: ['test', 'prop', 'context-props', 'nested2'],
+            queryKey: ['test', 'prop', 'context-props', 'nested2', 'context-prop-2'],
+          },
+          nested3: expect.any(Function),
+        },
+      });
+
+      expect(sut.prop).toHaveType<
+        {
+          _def: readonly ['test', 'prop'];
+        } & ((value: string) => {
+          queryKey: readonly ['test', 'prop', string];
+          _ctx: {
+            nested1: { queryKey: readonly ['test', 'prop', string, 'nested1'] };
+            nested2: {
+              _def: readonly ['test', 'prop', string, 'nested2'];
+              queryKey: readonly ['test', 'prop', string, 'nested2', string];
+            };
+            nested3: { _def: readonly ['test', 'prop', string, 'nested3'] } & ((nestedValue?: string) => {
+              queryKey: readonly ['test', 'prop', string, 'nested3', string];
+              _ctx: {
+                nested4: { queryKey: readonly ['test', 'prop', string, 'nested3', string, 'nested4'] };
+              };
+            });
+          };
+        })
+      >();
+
+      expect({} as inferQueryKeys<typeof sut>).toHaveStrictType<{
+        _def: readonly ['test'];
+        prop: {
+          _def: readonly ['test', 'prop'];
+          queryKey: readonly ['test', 'prop', string];
+          _ctx: {
+            nested1: { queryKey: readonly ['test', 'prop', string, 'nested1'] };
+            nested2: {
+              _def: readonly ['test', 'prop', string, 'nested2'];
+              queryKey: readonly ['test', 'prop', string, 'nested2', string];
+            };
+            nested3: {
+              _def: readonly ['test', 'prop', string, 'nested3'];
+              queryKey: readonly ['test', 'prop', string, 'nested3', string | undefined];
+              _ctx: {
+                nested4: {
+                  queryKey: readonly ['test', 'prop', string, 'nested3', string | undefined, 'nested4'];
+                };
+              };
+            };
+          };
+        };
+      }>();
+    });
+  });
 });
